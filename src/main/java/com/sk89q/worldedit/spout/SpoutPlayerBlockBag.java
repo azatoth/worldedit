@@ -32,8 +32,8 @@ import com.sk89q.worldedit.blocks.BlockID;
 import org.spout.api.inventory.InventoryBase;
 import org.spout.api.inventory.ItemStack;
 import org.spout.api.material.Material;
-import org.spout.api.material.MaterialRegistry;
-import org.spout.api.player.Player;
+import org.spout.api.entity.Player;
+import org.spout.vanilla.material.VanillaMaterials;
 import org.spout.vanilla.util.VanillaPlayerUtil;
 
 public class SpoutPlayerBlockBag extends BlockBag {
@@ -60,7 +60,7 @@ public class SpoutPlayerBlockBag extends BlockBag {
      */
     private void loadInventory() {
         if (items == null) {
-            items = VanillaPlayerUtil.getInventory(player.getEntity()).getContents();
+            items = VanillaPlayerUtil.getInventory(player).getContents();
         }
     }
 
@@ -84,7 +84,7 @@ public class SpoutPlayerBlockBag extends BlockBag {
         final short damage = item.getDamage();
         int amount = (item instanceof BaseItemStack) ? ((BaseItemStack) item).getAmount() : 1;
         assert(amount == 1);
-        Material mat = MaterialRegistry.get(id);
+        Material mat = VanillaMaterials.getMaterial(id);
         if (mat.hasSubMaterials()) {
             mat = mat.getSubMaterial(damage);
         }
@@ -98,25 +98,25 @@ public class SpoutPlayerBlockBag extends BlockBag {
         boolean found = false;
 
         for (int slot = 0; slot < items.length; ++slot) {
-            ItemStack bukkitItem = items[slot];
+            ItemStack spoutItem = items[slot];
 
-            if (bukkitItem == null) {
+            if (spoutItem == null) {
                 continue;
             }
 
-            if (!bukkitItem.getMaterial().equals(mat)) {
+            if (!spoutItem.getMaterial().equals(mat)) {
                 // Type id or damage value doesn't fit
                 continue;
             }
 
-            int currentAmount = bukkitItem.getAmount();
+            int currentAmount = spoutItem.getAmount();
             if (currentAmount < 0) {
                 // Unlimited
                 return;
             }
 
             if (currentAmount > 1) {
-                bukkitItem.setAmount(currentAmount - 1);
+                spoutItem.setAmount(currentAmount - 1);
                 found = true;
             } else {
                 items[slot] = null;
@@ -140,7 +140,7 @@ public class SpoutPlayerBlockBag extends BlockBag {
     public void storeItem(BaseItem item) throws BlockBagException {
         final short id = (short) item.getType();
         final short damage = item.getDamage();
-        Material mat = MaterialRegistry.get(id);
+        Material mat = VanillaMaterials.getMaterial(id);
         if (mat.hasSubMaterials()) {
             mat = mat.getSubMaterial(damage);
         }
@@ -156,9 +156,9 @@ public class SpoutPlayerBlockBag extends BlockBag {
         int freeSlot = -1;
 
         for (int slot = 0; slot < items.length; ++slot) {
-            ItemStack bukkitItem = items[slot];
+            ItemStack spoutItem = items[slot];
 
-            if (bukkitItem == null) {
+            if (spoutItem == null) {
                 // Delay using up a free slot until we know there are no stacks
                 // of this item to merge into
 
@@ -168,12 +168,12 @@ public class SpoutPlayerBlockBag extends BlockBag {
                 continue;
             }
 
-            if (!bukkitItem.getMaterial().equals(mat)) {
+            if (!spoutItem.getMaterial().equals(mat)) {
                 // Type id or damage value doesn't fit
                 continue;
             }
 
-            int currentAmount = bukkitItem.getAmount();
+            int currentAmount = spoutItem.getAmount();
             if (currentAmount < 0) {
                 // Unlimited
                 return;
@@ -185,11 +185,11 @@ public class SpoutPlayerBlockBag extends BlockBag {
 
             int spaceLeft = mat.getMaxStackSize() - currentAmount;
             if (spaceLeft >= amount) {
-                bukkitItem.setAmount(currentAmount + amount);
+                spoutItem.setAmount(currentAmount + amount);
                 return;
             }
 
-            bukkitItem.setAmount(mat.getMaxStackSize());
+            spoutItem.setAmount(mat.getMaxStackSize());
             amount -= spaceLeft;
         }
 
@@ -207,7 +207,7 @@ public class SpoutPlayerBlockBag extends BlockBag {
     @Override
     public void flushChanges() {
         if (items != null) {
-            InventoryBase inv = VanillaPlayerUtil.getInventory(player.getEntity());
+            InventoryBase inv = VanillaPlayerUtil.getInventory(player);
             for (int i = 0; i < items.length && i < inv.getSize(); ++i) {
                 inv.setItem(i, items[i]);
             }

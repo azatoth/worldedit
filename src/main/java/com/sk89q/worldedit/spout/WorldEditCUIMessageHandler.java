@@ -16,34 +16,29 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.sk89q.worldedit.bukkit;
+package com.sk89q.worldedit.spout;
 
 import com.sk89q.worldedit.LocalSession;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.messaging.PluginMessageListener;
-
-import java.nio.charset.Charset;
+import org.spout.api.protocol.MessageHandler;
+import org.spout.api.protocol.Session;
 
 /**
- * Handles incoming WorldEditCui init message
- * @author zml2008
+ * MessageHandler for WorldEditCUIMessage
  */
-public class CUIChannelListener implements PluginMessageListener {
-    public static final Charset UTF_8_CHARSET = Charset.forName("UTF-8");
+public class WorldEditCUIMessageHandler extends MessageHandler<WorldEditCUIMessage> {
     private final WorldEditPlugin plugin;
 
-    public CUIChannelListener(WorldEditPlugin plugin) {
+    public WorldEditCUIMessageHandler(WorldEditPlugin plugin) {
         this.plugin = plugin;
     }
 
     @Override
-    public void onPluginMessageReceived(String channel, Player player, byte[] message) {
-        LocalSession session = plugin.getSession(player);
-        if (session.hasCUISupport()) { // Already initialized
+    public void handleServer(Session session, WorldEditCUIMessage message) {
+        LocalSession localSession = plugin.getSession(session.getPlayer());
+        if (localSession.hasCUISupport()) { // Already initialized
             return;
         }
 
-        String text = new String(message, UTF_8_CHARSET);
-        session.handleCUIInitializationMessage(text);
+        localSession.handleCUIInitializationMessage(message.getMessage());
     }
 }

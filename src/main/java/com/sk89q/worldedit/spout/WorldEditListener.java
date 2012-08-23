@@ -21,19 +21,18 @@
 
 package com.sk89q.worldedit.spout;
 
-import com.sk89q.util.StringUtil;
 import com.sk89q.worldedit.LocalPlayer;
 import com.sk89q.worldedit.LocalWorld;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldVector;
 import org.spout.api.Spout;
+import org.spout.api.chat.ChatArguments;
+import org.spout.api.chat.ChatSection;
 import org.spout.api.event.EventHandler;
 import org.spout.api.event.Listener;
 import org.spout.api.event.Order;
-import org.spout.api.event.player.PlayerChatEvent;
 import org.spout.api.event.player.PlayerInteractEvent;
 import org.spout.api.event.player.PlayerInteractEvent.Action;
-import org.spout.api.event.player.PlayerJoinEvent;
 import org.spout.api.event.player.PlayerLeaveEvent;
 import org.spout.api.event.server.PreCommandEvent;
 import org.spout.api.event.world.WorldLoadEvent;
@@ -41,8 +40,8 @@ import org.spout.api.generator.biome.BiomeGenerator;
 import org.spout.api.geo.discrete.Point;
 import org.spout.api.scheduler.TaskPriority;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Handles all events thrown in relation to a Player
@@ -55,8 +54,6 @@ public class WorldEditListener implements Listener {
 
     private boolean ignoreLeftClickAir = false;
 
-    private final static Pattern cuipattern = Pattern.compile("u00a74u00a75u00a73u00a74([^|]*)\\|?(.*)");
-
     /**
      * Construct the object;
      *
@@ -64,11 +61,6 @@ public class WorldEditListener implements Listener {
      */
     public WorldEditListener(WorldEditPlugin plugin) {
         this.plugin = plugin;
-    }
-
-    @EventHandler(order = Order.EARLIEST)
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        plugin.wrapPlayer(event.getPlayer()).dispatchCUIHandshake();
     }
 
     /**
@@ -89,17 +81,28 @@ public class WorldEditListener implements Listener {
     @EventHandler(order = Order.EARLY)
     public void onPlayerCommandPreprocess(PreCommandEvent event) {
 
-        if (event.getMessage().startsWith("nowe:")) {
-            event.setMessage(event.getMessage().substring(5));
+        if (event.getCommand().startsWith("nowe:")) {
+            event.setCommand(event.getCommand().substring(5));
             return;
         }
 
-        String[] split = event.getMessage().split(" ");
+        List<ChatSection> args = event.getArguments().toSections(ChatSection.SplitType.WORD);
+        if (args.size() > 0) {
+            String[] split = new String[args.size() + 1];
+            split[0] = "/" + event.getCommand();
+            for (int i = 0; i < args.size(); ++i) {
+                split[i + 1] = args.get(i).getPlainString();
+            }
 
-        if (split.length > 0) {
-            split[0] = "/" + split[0];
-            split = plugin.getWorldEdit().commandDetection(split);
-            event.setMessage(StringUtil.joinString(split, " "));
+            String[] newSplit = plugin.getWorldEdit().commandDetection(split);
+            if (!Arrays.equals(split, newSplit)) {
+                event.setCommand(newSplit[0]);
+                ChatArguments newArgs = new ChatArguments();
+                for (int i = 1; i < newSplit.length; ++i) {
+                    newArgs.append(newSplit[i]);
+                }
+                event.setArguments(newArgs);
+            }
         }
     }
 
@@ -123,8 +126,8 @@ public class WorldEditListener implements Listener {
 
             if (!event.isAir()) {
                 final Point clickedBlock = event.getInteractedPoint();
-                final WorldVector pos = new WorldVector(world, clickedBlock.getX(),
-                        clickedBlock.getY(), clickedBlock.getZ());
+                final WorldVector pos = new WorldVector(world, clickedBlock.getBlockX(),
+                        clickedBlock.getBlockY(), clickedBlock.getBlockZ());
 
 
                 if (we.handleBlockLeftClick(player, pos)) {
@@ -150,8 +153,8 @@ public class WorldEditListener implements Listener {
         } else if (action == Action.RIGHT_CLICK) {
             if (!event.isAir()) {
                 final Point clickedBlock = event.getInteractedPoint();
-                final WorldVector pos = new WorldVector(world, clickedBlock.getX(),
-                        clickedBlock.getY(), clickedBlock.getZ());
+                final WorldVector pos = new WorldVector(world, clickedBlock.getBlockX(),
+                        clickedBlock.getBlockY(), clickedBlock.getBlockZ());
 
                 if (we.handleBlockRightClick(player, pos)) {
                     event.setCancelled(true);
@@ -161,28 +164,6 @@ public class WorldEditListener implements Listener {
             if (we.handleRightClick(player)) {
                 event.setCancelled(true);
             }
-        }
-    }
-
-    @EventHandler
-    public void onPlayerChat(PlayerChatEvent event) {
-        if (event.isCancelled()) {
-            return;
-        }
-
-        Matcher matcher = cuipattern.matcher(event.getMessage());
-        if (matcher.find()) {
-            String type = matcher.group(1);
-            String args = matcher.group(2);
-
-            if( type.equals("v") ) {
-                try {
-                    plugin.getSession(event.getPlayer()).setCUIVersion(Integer.parseInt(args));
-                    event.setCancelled(true);
-                } catch( NumberFormatException e ) {
-                }
-            }
-
         }
     }
 

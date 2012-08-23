@@ -24,8 +24,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 
@@ -69,11 +67,6 @@ public class WorldEditPlugin extends JavaPlugin {
      * Holds the configuration for WorldEdit.
      */
     private BukkitConfiguration config;
-
-    /**
-     * Stores players who are using plugin channels for the cui
-     */
-    private final Set<String> pluginChannelCui = new HashSet<String>();
 
     /**
      * Called on plugin enable.
@@ -389,17 +382,5 @@ public class WorldEditPlugin extends JavaPlugin {
         RegionSelector sel = selection.getRegionSelector();
         session.setRegionSelector(BukkitUtil.getLocalWorld(player.getWorld()), sel);
         session.dispatchCUISelection(wrapPlayer(player));
-    }
-
-    public void setPluginChannelCUI(String name, boolean value) {
-        if (value) {
-            pluginChannelCui.add(name);
-        } else {
-            pluginChannelCui.remove(name);
-        }
-    }
-
-    public boolean hasPluginChannelCUI(String name) {
-        return pluginChannelCui.contains(name);
     }
 }
